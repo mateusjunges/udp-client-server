@@ -28,6 +28,26 @@ int server_udp(int sockfd) {
         perror("malloc");
         return -1;
     }
+
+    /*Recvfrom()
+     * The recvfrom() function shall receive a message from a connection-mode or connectionless-mode socket. It is normally used with
+     * connectionless-mode sockets because it permits the application to retrieve the source address of received data.
+     * The recvfrom() function takes the following arguments:
+     * socket: Specifies the socket file descriptor.
+     * buffer: Points to the buffer where the message should be stored.
+     * length: Specifies the length in bytes of the buffer pointed to by the buffer argument.
+     * Specifies the type of message reception. Values of this argument are formed by logically OR'ing zero or more of the following values:
+        MSG_PEEK
+        Peeks at an incoming message. The data is treated as unread and the next recvfrom() or similar function shall still return this data.
+        MSG_OOB
+        Requests out-of-band data. The significance and semantics of out-of-band data are protocol-specific.
+        MSG_WAITALL
+        On SOCK_STREAM sockets this requests that the function block until the full amount of data can be returned. The function may return the smaller amount of data if the socket is a message-based socket, if a signal is caught, if the connection is terminated, if MSG_PEEK was specified, or if an error is pending for the socket.
+     * address: A null pointer, or points to a sockaddr structure in which the sending address is to be stored. The length and format of the address depend on the address family of the socket.
+     * address_len: Specifies the length of the sockaddr structure pointed to by the address argument.
+     *
+     * These calls return the number of bytes received, or -1 if an error occurred. The return value will be 0 when the peer has performed an orderly shutdown.
+     * */
     ssize_t r = recvfrom(sockfd, buf, bufsize, 0, (struct sockaddr *) &client_addr, &client_addrlen); // used to receive messages from a socket
     if (r == -1) { // if recvfrom() returns -1, something went wrong
         perror("recvfrom");
@@ -36,6 +56,11 @@ int server_udp(int sockfd) {
     }
 
     char client_address[INET6_ADDRSTRLEN];
+    /*
+     * getnameinfo(): it converts a socket address to a
+     * corresponding host and service, in a
+     * protocol-independent manner.
+     * */
     int err = getnameinfo((struct sockaddr *) &client_addr, client_addrlen, client_address, sizeof(client_address), 0, 0, NI_NUMERICHOST);
     if (err != 0) {
         printf("Failure converting the address (code=%d)\n", err);
@@ -50,6 +75,30 @@ int server_udp(int sockfd) {
     }
     free(buf); // deallocates the memory previously allocated by a call to calloc, malloc, or realloc
     sum = htonl(sum); // converts the unsigned integer hostlong from host byte order to network byte order.
+
+    /*
+     * sendto()
+     * The sendto() function sends data on the socket with descriptor socket.
+     * The sendto() call applies to either connected or unconnected sockets
+     * Params:
+     * socket: The socket descriptor.
+       buffer: The pointer to the buffer containing the message to transmit.
+        length: The length of the message in the buffer pointed to by the msg parameter.
+        flags: Setting these flags is not supported in the AF_UNIX domain. The following flags are available:
+            MSG_OOB: Sends out-of-band data on the socket. Only SOCK_STREAM sockets support out-of-band data. The out-of-band data is a single byte.
+                Before out-of-band data can be sent between two programs, there must be some coordination of effort. If the data is intended to not be read inline,
+                the recipient of the out-of-band data must specify the recipient of the SIGURG signal that is generated when the out-of-band data is sent.
+                If no recipient is set, no signal is sent. The recipient is set up by using F_SETOWN operand of the fcntl() command,
+                specifying either a pid or gid. For more information on this operand, refer to the fcntl() command.
+                The recipient of the data determines whether to receive out-of-band data inline or not inline by the setting of the SO_OOBINLINE option of setsockopt().
+                For more information on receiving out-of-band data, refer to the setsockopt(), recv(), recvfrom() and recvmsg() commands.
+            MSG_DONTROUTE: The SO_DONTROUTE option is turned on for the duration of the operation.
+                This is usually used only by diagnostic or routing programs.
+        address: The address of the target.
+        addr_len: The size of the address pointed to by address.
+
+        On success, these calls return the number of characters sent. On error, -1 is returned, and errno is set appropriately
+     * */
     ssize_t s = sendto(sockfd, (void *) &sum, sizeof(uint32_t), 0, (struct sockaddr *) &client_addr, client_addrlen);
     if (s != sizeof(uint32_t)) {
         perror("sendto");
@@ -79,6 +128,18 @@ int main() {
     servaddr.sin_port = htons(20000);
 
     // Bind the socket with the server address
+    /*
+     * bind()
+     * Defines a relationship between the socket you created and the addresses that are available on your host.
+     * For example you can bind a socket on all addresses or on a specific IP which has been configured on a
+     * network adapter by the host's operating system.
+     * assigns the address specified by addr to the socket referred to by the file
+       descriptor sockfd.  addrlen specifies the size, in bytes, of the
+       address structure pointed to by addr.  Traditionally, this operation
+       is called “assigning a name to a socket”
+       On success, zero is returned.  On error, -1 is returned, and errno is
+       set appropriately.
+     * */
     if (bind(sockfd, (const struct sockaddr *) &servaddr, sizeof(servaddr)) < 0) {
         perror("bind failed");
         exit(EXIT_FAILURE);
