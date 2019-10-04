@@ -1,7 +1,7 @@
 # UDP Client Server
 
 ## Compiling
-- 1. Run `make`
+- Run `make`
 
 ## Executing
 - Open your terminal and run `./server`
