@@ -70,8 +70,20 @@ int server_udp(int sockfd) {
     size_t recv_bytes = r;
     int nint = recv_bytes / sizeof(uint32_t); //number of integers
     uint32_t sum = 0;
+    uint32_t prefix_sum[nint];
+
+    // Initialize all array fields.
+    for (int i = 0; i < nint; i++) {
+        prefix_sum[i] = 0;
+    }
+
     for (int i = 0; i < nint; i++) {
         sum += ntohl(buf[i]);
+        if (i > 0) {
+            prefix_sum[i] = prefix_sum[i-1] + ntohl(buf[i]);
+        } else {
+            prefix_sum[i] = ntohl(buf[i]);
+        }
     }
     free(buf); // deallocates the memory previously allocated by a call to calloc, malloc, or realloc
     sum = htonl(sum); // converts the unsigned integer hostlong from host byte order to network byte order.
@@ -100,8 +112,14 @@ int server_udp(int sockfd) {
         On success, these calls return the number of characters sent. On error, -1 is returned, and errno is set appropriately
      * */
     ssize_t s = sendto(sockfd, (void *) &sum, sizeof(uint32_t), 0, (struct sockaddr *) &client_addr, client_addrlen);
+    ssize_t prefix = sendto(sockfd, (void *) &prefix_sum, sizeof(uint32_t)*nint, 0, (struct sockaddr *) &client_addr, client_addrlen);
+
     if (s != sizeof(uint32_t)) {
         perror("sendto");
+        return -2;
+    }
+    if (prefix != sizeof(uint32_t)*nint) {
+        perror("sendto (prefix sum)");
         return -2;
     }
     return 0;
@@ -144,7 +162,8 @@ int main() {
         perror("bind failed");
         exit(EXIT_FAILURE);
     }
-    while (1)
+    while (1) {
         server_udp(sockfd);
 
+    }
 }

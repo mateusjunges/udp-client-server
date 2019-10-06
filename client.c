@@ -76,6 +76,7 @@ int get_sum_of_ints_udp_sol(int sockfd, uint32_t *tab, size_t length, long *rep)
 	free(newtab); //deallocates the memory previously allocated by a call to calloc, malloc, or realloc
 	uint32_t answer;
 	recv_bytes = recv(sockfd, &answer, sizeof(uint32_t), 0); //used to receive messages from a socket
+
 	/* Recv Parameters:
 	 * sockfd: The socket descriptor
 	 * answer: The pointer to the buffer that receives the data.
@@ -91,6 +92,12 @@ int get_sum_of_ints_udp_sol(int sockfd, uint32_t *tab, size_t length, long *rep)
 	return 0;
 }
 
+/**
+ * Main function.
+ * @param argc
+ * @param argv
+ * @return
+ */
 int main(int argc, char *argv[])
 {
     int l;
@@ -106,6 +113,7 @@ int main(int argc, char *argv[])
     int sockfd; // Socket descriptor.
     struct sockaddr_in   servaddr;
     int status;
+    int prefix_sum_status;
     struct hostent *hostinfo;
   
     // Creating socket file descriptor
@@ -146,14 +154,39 @@ int main(int argc, char *argv[])
       return -1;
     }
     long _result;
+    uint32_t prefix_sum_vector[argc-2];
     int n = sizeof(tab)/sizeof(tab[0]);
     int tablen = n*sizeof(uint32_t);
     
 
     status = get_sum_of_ints_udp_sol(sockfd, tab, n, &_result); //Sum up all array numbers.
-    
+
+    uint32_t answer[n];
+
+    int prefix = recv(sockfd, &answer, sizeof(uint32_t)*n, 0);
+
+    printf("\nYou sent this array: ");
+    printf("[");
+    for (int i = 0; i < (argc-2); i++) {
+        if (i < argc-3)
+            printf("%d, ", tab[i]);
+        else
+            printf("%d]\n", tab[i]);
+    }
+
+    printf("The prefix sum array is here: ");
+    printf("[");
+    for (int i = 0; i < (argc-2); i++) {
+        ntohl(answer[i]);
+        if (i < argc-3) {
+            printf("%d, ", answer[i]);
+        } else {
+            printf("%d]\n", answer[i]);
+        }
+    }
+
     if (!status) {
-      printf("Result: %ld\n", _result);
+      printf("Sum of all integers: %ld\n", _result);
       return 0;
     }  else {
       printf("Error: %d\n", status);
